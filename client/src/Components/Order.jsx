@@ -6,10 +6,11 @@ import { Link } from 'react-router-dom';
 
 const Order = () => {
   const [products, setProducts] = useState([]);
+  const [orderList, setOrderList] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState('');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [orderList, setOrderList] = useState([]);
 
   useEffect(() => {
     fetchProducts();
@@ -48,10 +49,14 @@ const Order = () => {
     setQuantity(e.target.value);
   };
 
+  const handleSearch = (e) => {
+    setSearch(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) {
-      setError('Quantity must be a positive integer greater than 0');
+    if (!quantity || parseInt(quantity) <= 0) {
+      setError('Please enter a quantity greater than 0.');
       return;
     }
 
@@ -62,25 +67,41 @@ const Order = () => {
       });
       setSelectedProduct(null);
       setQuantity('');
+      fetchProducts();
       fetchOrderList();
     } catch (error) {
-      console.error('Error submitting order:', error);
+      console.error('Error adding order:', error);
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const filteredProducts = products.filter((product) => {
+    return (
+      product.ProductCode.toLowerCase().includes(search.toLowerCase()) ||
+      product.Name.toLowerCase().includes(search.toLowerCase())
+    );
+  });
+
+  const isProductOrdered = (productCode) => {
+    return orderList.some(order => order.ProductCode === productCode);
   };
+
   return (
     <div className="container mt-4">
       <h2>Order Products</h2>
       <Link to="/managerdashboard/order/orderproperties" className="btn btn-outline-primary mb-3 rounded-3 text-end">
         Properties
       </Link>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search by Product Code or Name"
+            value={search}
+            onChange={handleSearch}
+          />
+        </div>
+      </div>
       <table className="table table-bordered">
         <thead className="thead-dark">
           <tr>
@@ -92,8 +113,12 @@ const Order = () => {
           </tr>
         </thead>
         <tbody>
-          {products.map((product) => (
-            <tr key={product.ProductCode} onClick={() => handleProductClick(product)}>
+          {filteredProducts.map((product) => (
+            <tr
+              key={product.ProductCode}
+              onClick={() => handleProductClick(product)}
+              className={isProductOrdered(product.ProductCode) ? 'table-info' : ''}
+            >
               <td>{product.ProductCode}</td>
               <td>{product.Name}</td>
               <td>{product.Description}</td>
@@ -128,18 +153,22 @@ const Order = () => {
       <table className="table table-bordered">
         <thead className="thead-dark">
           <tr>
-            <th>Date</th>
+           
+            
             <th>Product Code</th>
-            <th>Quantity</th>
+            <th>Order Quantity</th>
+            <th>Date</th>
             <th>Order Status</th>
           </tr>
         </thead>
         <tbody>
           {orderList.map((order) => (
             <tr key={order.NotificationNo}>
-              <td>{formatDate(order.Date)}</td>
+             
+              
               <td>{order.ProductCode}</td>
               <td>{order.Quantity}</td>
+              <td>{order.Date}</td>
               <td>{order.OrderStatus}</td>
             </tr>
           ))}
@@ -150,4 +179,3 @@ const Order = () => {
 };
 
 export default Order;
-

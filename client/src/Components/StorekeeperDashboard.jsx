@@ -41,7 +41,7 @@ const StorekeeperDashboard = () => {
           </li> 
           <li className="w-100"> 
             <Link 
-            to="/StorekeeperDashboard/order" 
+            to="/StorekeeperDashboard/StoreKeeperOrder" 
             className="d-flex nav-link text-white px-0 align-middle" 
             > 
             <i className="fs-4 bi-columns ms-2"></i> 

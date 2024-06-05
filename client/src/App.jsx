@@ -16,7 +16,7 @@ import Transactions from './Components/Transactions';
 import Repairs from './Components/Repairs';
 import DayEnd from './Components/DayEnd';
 import Products from './Components/Products';
-import CashierOrder from './Components/CashierOrder';
+import StoreKeeperOrder from './Components/StoreKeeperOrder';
 import CashierReports from './Components/CashierReports';
 import Suppliers from './Components/Suppliers';
 
@@ -47,7 +47,7 @@ const App = () => {
 
         <Route path="/StorekeeperDashboard" element={<StoreKeeperDashboard />} >
           <Route path="/StorekeeperDashboard/products" element={<Products />} />
-          <Route path="/StorekeeperDashboard/order" element={<CashierOrder/>} />
+          <Route path="/StorekeeperDashboard/storekeeperorder" element={<StoreKeeperOrder/>} />
           <Route path="/StorekeeperDashboard/reports" element={<CashierReports />} />
           <Route path="/StorekeeperDashboard/suppliers" element={<Suppliers />} />
         </Route>
