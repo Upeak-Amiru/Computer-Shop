@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/inventory', (req, res) => {
   const query = `
-    SELECT p.ProductCode, p.Name, p.Description, p.Quantity, p.WarrantyDetail, p.SellingPrice
+    SELECT p.ProductCode, p.Name, p.Description, p.Quantity, b.WarrantyDetail, b.Price
     FROM Product p
     JOIN Batch b ON p.ProductCode = b.ProductCode
     WHERE p.MinQuantity > 0  -- Exclude products with Minquantity 0

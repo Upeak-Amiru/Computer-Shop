@@ -72,8 +72,6 @@ const Products = () => {
       ProductCode: product.ProductCode || '',
       Name: product.Name || '',
       Description: product.Description || '',
-      Quantity: product.Quantity || '',
-      MinQuantity: product.MinQuantity || '',
     });
     setShowModal(true);
   };

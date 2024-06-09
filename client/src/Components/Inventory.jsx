@@ -76,7 +76,7 @@ const Inventory = () => {
             <th>Description</th>
             <th>Quantity</th>
             <th>Warranty Detail</th>
-            <th>Sell Price</th>
+            <th>Price</th>
           </tr>
         </thead>
         <tbody>
@@ -89,7 +89,7 @@ const Inventory = () => {
                 <td>{product.Description}</td>
                 <td>{product.Quantity}</td>
                 <td>{product.WarrantyDetail}</td>
-                <td>{product.SellingPrice}</td>
+                <td>{product.Price}</td>
               </tr>
             ))}
         </tbody>
