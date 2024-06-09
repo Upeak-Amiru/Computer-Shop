@@ -38,6 +38,9 @@ const Products = () => {
       await axios.post('http://localhost:3000/storekeeper/products', currentProduct);
       fetchProducts();
       setShowModal(false);
+      setAlertMessage('Product added successfully');
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000);
     } catch (error) {
       alert(error.response.data.message);
     }
@@ -65,7 +68,13 @@ const Products = () => {
 
   const openModal = (type, product = {}) => {
     setModalType(type);
-    setCurrentProduct(product);
+    setCurrentProduct({
+      ProductCode: product.ProductCode || '',
+      Name: product.Name || '',
+      Description: product.Description || '',
+      Quantity: product.Quantity || '',
+      MinQuantity: product.MinQuantity || '',
+    });
     setShowModal(true);
   };
 

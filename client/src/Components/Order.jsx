@@ -1,5 +1,4 @@
-// src/Order.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Link } from 'react-router-dom';
@@ -10,7 +9,11 @@ const Order = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState('');
   const [search, setSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderDate, setOrderDate] = useState('');
+  const [orderStatus, setOrderStatus] = useState('');
   const [error, setError] = useState('');
+  const orderTableRef = useRef(null);
 
   useEffect(() => {
     fetchProducts();
@@ -46,11 +49,29 @@ const Order = () => {
   };
 
   const handleQuantityChange = (e) => {
-    setQuantity(e.target.value);
+    const value = e.target.value;
+    if (Number.isInteger(Number(value)) && Number(value) > 0) {
+      setQuantity(value);
+      setError('');
+    } else {
+      setError('Please enter a positive integer greater than 0.');
+    }
   };
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
+  };
+
+  const handleOrderSearch = (e) => {
+    setOrderSearch(e.target.value);
+  };
+
+  const handleOrderDate = (e) => {
+    setOrderDate(e.target.value);
+  };
+
+  const handleOrderStatus = (e) => {
+    setOrderStatus(e.target.value);
   };
 
   const handleSubmit = async (e) => {
@@ -69,20 +90,74 @@ const Order = () => {
       setQuantity('');
       fetchProducts();
       fetchOrderList();
+      scrollToBottom();
     } catch (error) {
       console.error('Error adding order:', error);
     }
   };
 
-  const filteredProducts = products.filter((product) => {
-    return (
-      product.ProductCode.toLowerCase().includes(search.toLowerCase()) ||
-      product.Name.toLowerCase().includes(search.toLowerCase())
-    );
-  });
+  const handleBack = () => {
+    setSelectedProduct(null);
+    setQuantity('');
+    setError('');
+  };
+
+  const scrollToBottom = () => {
+    orderTableRef.current.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const isProductOrdered = (productCode) => {
-    return orderList.some(order => order.ProductCode === productCode);
+    return orderList.some(order => order.ProductCode === productCode && order.OrderStatus !== 'Complete');
+  };
+
+  const filteredProducts = products
+    .filter((product) => {
+      return (
+        product.ProductCode.toLowerCase().includes(search.toLowerCase()) ||
+        product.Name.toLowerCase().includes(search.toLowerCase())
+      );
+    })
+    .sort((a, b) => {
+      const aOrdered = isProductOrdered(a.ProductCode);
+      const bOrdered = isProductOrdered(b.ProductCode);
+      if (aOrdered && !bOrdered) return 1;
+      if (!aOrdered && bOrdered) return -1;
+      return 0;
+    });
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const filteredOrders = orderList.filter((order) => {
+    const orderDateMatch = orderDate ? formatDate(order.Date) === orderDate : true;
+    const orderStatusMatch = orderStatus ? order.OrderStatus === orderStatus : true;
+    return (
+      order.ProductCode.toLowerCase().includes(orderSearch.toLowerCase()) &&
+      orderDateMatch &&
+      orderStatusMatch
+    );
+  }).sort((a, b) => {
+    if (a.OrderStatus === 'Complete' && b.OrderStatus !== 'Complete') return 1;
+    if (a.OrderStatus !== 'Complete' && b.OrderStatus === 'Complete') return -1;
+    return 0;
+  });
+
+  const getRowClass = (orderStatus) => {
+    switch (orderStatus) {
+      case 'Verified':
+        return 'table-warning';
+      case 'Complete':
+        return 'table-success';
+      case 'Cancelled':
+        return 'table-danger';
+      default:
+        return '';
+    }
   };
 
   return (
@@ -146,30 +221,68 @@ const Order = () => {
           </div>
           {error && <div className="alert alert-danger">{error}</div>}
           <button type="submit" className="btn btn-primary mt-3">Enter</button>
+          <button type="button" className="btn btn-secondary mt-3 ms-3" onClick={handleBack}>Back</button>
         </form>
       )}
 
       <h3 className="mt-4">Order List</h3>
+      <div className="row mb-3">
+        <div className="col-md-3">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search by Product Code"
+            value={orderSearch}
+            onChange={handleOrderSearch}
+          />
+        </div>
+        <div className="col-md-3">
+          <input
+            type="date"
+            className="form-control"
+            value={orderDate}
+            onChange={handleOrderDate}
+          />
+        </div>
+        <div className="col-md-3">
+          <select className="form-control" value={orderStatus} onChange={handleOrderStatus}>
+            <option value="">All Statuses</option>
+            <option value="Ordered">Ordered</option>
+            <option value="Verified">Verified</option>
+            <option value="Complete">Complete</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
       <table className="table table-bordered">
         <thead className="thead-dark">
           <tr>
-           
-            
             <th>Product Code</th>
+            <th>Name</th>
             <th>Order Quantity</th>
             <th>Date</th>
             <th>Order Status</th>
+            
           </tr>
         </thead>
-        <tbody>
-          {orderList.map((order) => (
-            <tr key={order.NotificationNo}>
-             
-              
+        <tbody ref={orderTableRef}>
+          {filteredOrders.map((order) => (
+            <tr key={order.NotificationNo} className={getRowClass(order.OrderStatus)}>
               <td>{order.ProductCode}</td>
+              <td>{order.Name}</td>
               <td>{order.Quantity}</td>
-              <td>{order.Date}</td>
+              <td>{formatDate(order.Date)}</td>
               <td>{order.OrderStatus}</td>
+              <td>
+                {order.OrderStatus === 'Ordered' && (
+                  <button 
+                    className="btn btn-warning"
+                    onClick={() => handleVerifyOrder(order.NotificationNo)}
+                  >
+                    Verify
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
