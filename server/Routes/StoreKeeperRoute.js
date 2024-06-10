@@ -3,6 +3,8 @@ import db from '../config/db.js';
 const router = express.Router();
 //Orders-----------------------------------------------------------------------------------------------------
 
+// Orders-----------------------------------------------------------------------------------------------------
+
 // Fetch requested orders with supplier information
 router.get('/orders', (req, res) => {
   const query = `
@@ -79,6 +81,7 @@ router.get('/orders/verified', (req, res) => {
 // Complete order and update product quantity
 router.put('/order/complete/:notificationNo', (req, res) => {
   const { notificationNo } = req.params;
+  const { ProductCode, Price, WarrantyDetail } = req.body;
 
   const getOrderQuery = `
     SELECT ProductCode, Quantity 
@@ -98,6 +101,11 @@ router.put('/order/complete/:notificationNo', (req, res) => {
     WHERE ProductCode = ?
   `;
 
+  const insertBatchQuery = `
+    INSERT INTO Batch (InwardDate, ProductCode, WarrantyDetail, Price)
+    VALUES (Now(), ?, ?, ?)
+  `;
+
   db.query(getOrderQuery, [notificationNo], (err, results) => {
     if (err) {
       console.error('Error fetching order details:', err);
@@ -108,7 +116,7 @@ router.put('/order/complete/:notificationNo', (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
-    const { ProductCode, Quantity } = results[0];
+    const { Quantity } = results[0];
 
     db.beginTransaction((err) => {
       if (err) {
@@ -132,14 +140,23 @@ router.put('/order/complete/:notificationNo', (req, res) => {
             });
           }
 
-          db.commit((err) => {
+          db.query(insertBatchQuery, [ProductCode, WarrantyDetail, Price], (err, results) => {
             if (err) {
               return db.rollback(() => {
-                console.error('Error committing transaction:', err);
+                console.error('Error inserting batch details:', err);
                 res.status(500).json({ success: false, message: 'Server error.' });
               });
             }
-            res.json({ success: true, message: 'Order completed and product quantity updated.' });
+
+            db.commit((err) => {
+              if (err) {
+                return db.rollback(() => {
+                  console.error('Error committing transaction:', err);
+                  res.status(500).json({ success: false, message: 'Server error.' });
+                });
+              }
+              res.json({ success: true, message: 'Order completed and product quantity updated.' });
+            });
           });
         });
       });
@@ -165,7 +182,11 @@ router.get('/products', (req, res) => {
 
 // Add a new product
 router.post('/products', (req, res) => {
-  const { ProductCode, Name, Description, Quantity, MinQuantity } = req.body;
+  const { ProductCode, Name, Description, Quantity, MinQuantity, WarrantyDetail, SellingPrice } = req.body;
+
+  if (!ProductCode || !Name || !Description || !WarrantyDetail || !SellingPrice) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
 
   const checkSql = 'SELECT * FROM Product WHERE Name = ?';
   db.query(checkSql, [Name], (err, results) => {
@@ -174,25 +195,30 @@ router.post('/products', (req, res) => {
       return res.status(400).json({ message: 'Product already exists' });
     }
 
-    const sql = 'INSERT INTO Product (ProductCode, Name, Description, Quantity, MinQuantity) VALUES (?, ?, ?, 0, 10)';
-    db.query(sql, [ProductCode, Name, Description, Quantity, MinQuantity], (err) => {
+    const sql = 'INSERT INTO Product (ProductCode, Name, Description, Quantity, MinQuantity, WarrantyDetail, SellingPrice) VALUES (?, ?, ?, 0, 10, ?, ?)';
+    db.query(sql, [ProductCode, Name, Description, WarrantyDetail, SellingPrice], (err) => {
       if (err) throw err;
-          res.json({ message: 'Product added successfully' });
-        });
-      });
+      res.json({ message: 'Product added successfully' });
     });
+  });
+});
 
 // Update an existing product
 router.put('/products/:ProductCode', (req, res) => {
   const { ProductCode } = req.params;
-  const { Name, Description } = req.body;
+  const { Name, Description, WarrantyDetail, SellingPrice } = req.body;
 
-  const sql = 'UPDATE Product SET Name = ?, Description = ? WHERE ProductCode = ?';
-  db.query(sql, [Name, Description, ProductCode], (err) => {
+  if (!Name || !Description || !WarrantyDetail || !SellingPrice) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  const sql = 'UPDATE Product SET Name = ?, Description = ?, WarrantyDetail = ?, SellingPrice = ? WHERE ProductCode = ?';
+  db.query(sql, [Name, Description, WarrantyDetail, SellingPrice, ProductCode], (err) => {
     if (err) throw err;
-        res.json({ message: 'Product updated successfully' });
-      });
-    });
+    res.json({ message: 'Product updated successfully' });
+  });
+});
+
 // Delete a product
 router.delete('/products/:ProductCode', (req, res) => {
   const { ProductCode } = req.params;

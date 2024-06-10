@@ -12,8 +12,10 @@ const Products = () => {
     ProductCode: '',
     Name: '',
     Description: '',
-    Quantity: '',
-    MinQuantity: '',
+    Quantity: 0,
+    MinQuantity: 10,
+    WarrantyDetail: '',
+    SellingPrice: '',
   });
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -23,14 +25,22 @@ const Products = () => {
   }, []);
 
   const fetchProducts = async () => {
-    const response = await axios.get('http://localhost:3000/storekeeper/products');
-    setProducts(response.data);
+    try {
+      const response = await axios.get('http://localhost:3000/storekeeper/products');
+      setProducts(response.data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    const response = await axios.get(`http://localhost:3000/storekeeper/products?search=${searchTerm}`);
-    setProducts(response.data);
+    try {
+      const response = await axios.get(`http://localhost:3000/storekeeper/products?search=${searchTerm}`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleAddProduct = async () => {
@@ -61,8 +71,12 @@ const Products = () => {
 
   const handleDeleteProduct = async (productCode) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      await axios.delete(`http://localhost:3000/storekeeper/products/${productCode}`);
-      fetchProducts();
+      try {
+        await axios.delete(`http://localhost:3000/storekeeper/products/${productCode}`);
+        fetchProducts();
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -72,6 +86,10 @@ const Products = () => {
       ProductCode: product.ProductCode || '',
       Name: product.Name || '',
       Description: product.Description || '',
+      Quantity: product.Quantity || 0,
+      MinQuantity: product.MinQuantity || 10,
+      WarrantyDetail: product.WarrantyDetail || '',
+      SellingPrice: product.SellingPrice || '',
     });
     setShowModal(true);
   };
@@ -99,6 +117,8 @@ const Products = () => {
             <th>ProductCode</th>
             <th>Name</th>
             <th>Description</th>
+            <th>Warranty Detail</th>
+            <th>Selling Price</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -128,6 +148,20 @@ const Products = () => {
                     ? '#768796'
                     : '',
               }}>{product.Description}</td>
+              <td 
+              style={{
+                backgroundColor:
+                product.MinQuantity === 0
+                    ? '#768796'
+                    : '',
+              }}>{product.WarrantyDetail}</td>
+              <td 
+              style={{
+                backgroundColor:
+                product.MinQuantity === 0
+                    ? '#768796'
+                    : '',
+              }}>{product.SellingPrice}</td>
               <td
               
               style={{
@@ -192,6 +226,26 @@ const Products = () => {
                 value={currentProduct.Description}
                 onChange={(e) =>
                   setCurrentProduct({ ...currentProduct, Description: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group controlId="formWarrantyDetail" className="mt-2">
+              <Form.Label>Warranty Detail</Form.Label>
+              <Form.Control
+                type="text"
+                value={currentProduct.WarrantyDetail}
+                onChange={(e) =>
+                  setCurrentProduct({ ...currentProduct, WarrantyDetail: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group controlId="formSellingPrice" className="mt-2">
+              <Form.Label>Selling Price</Form.Label>
+              <Form.Control
+                type="text"
+                value={currentProduct.SellingPrice}
+                onChange={(e) =>
+                  setCurrentProduct({ ...currentProduct, SellingPrice: e.target.value })
                 }
               />
             </Form.Group>

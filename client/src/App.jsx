@@ -19,7 +19,9 @@ import Products from './Components/Products';
 import StoreKeeperOrder from './Components/StoreKeeperOrder';
 import CashierReports from './Components/CashierReports';
 import Suppliers from './Components/Suppliers';
-
+import TechnicianRepairs from './Components/TechnicianRepairs';
+import TechnicianRepairBill from './Components/TechnicianRepairBill';
+import TechnicianReport from './Components/TechnicianReport';
 
 
 
@@ -52,7 +54,11 @@ const App = () => {
           <Route path="/StorekeeperDashboard/suppliers" element={<Suppliers />} />
         </Route>
 
-        <Route path="/TechnicianDashboard" element={<TechnicianDashboard />} />
+        <Route path="/TechnicianDashboard" element={<TechnicianDashboard />} >
+          <Route path="/TechnicianDashboard/technicianrepairs" element={<TechnicianRepairs />} />
+          <Route path="/TechnicianDashboard/technicianrepairbill" element={<TechnicianRepairBill />} />
+          <Route path="/TechnicianDashboard/technicianreport" element={<TechnicianReport />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

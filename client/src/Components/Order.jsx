@@ -273,16 +273,6 @@ const Order = () => {
               <td>{order.Quantity}</td>
               <td>{formatDate(order.Date)}</td>
               <td>{order.OrderStatus}</td>
-              <td>
-                {order.OrderStatus === 'Ordered' && (
-                  <button 
-                    className="btn btn-warning"
-                    onClick={() => handleVerifyOrder(order.NotificationNo)}
-                  >
-                    Verify
-                  </button>
-                )}
-              </td>
             </tr>
           ))}
         </tbody>

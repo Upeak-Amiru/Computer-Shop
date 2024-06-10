@@ -2,11 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { Modal, Button, Form } from 'react-bootstrap';
 
 const StoreKeeperOrder = () => {
   const [requestedOrders, setRequestedOrders] = useState([]);
   const [verifiedOrders, setVerifiedOrders] = useState([]);
   const [error, setError] = useState('');
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [price, setPrice] = useState('');
+  const [warrantyDetail, setWarrantyDetail] = useState('');
 
   useEffect(() => {
     fetchRequestedOrders();
@@ -23,6 +28,7 @@ const StoreKeeperOrder = () => {
       console.error('Error fetching requested orders:', error);
     }
   };
+
   const fetchVerifiedOrders = async () => {
     try {
       const response = await axios.get('http://localhost:3000/storekeeper/orders/verified');
@@ -52,10 +58,30 @@ const StoreKeeperOrder = () => {
       console.error('Error canceling order:', error);
     }
   };
-  const handleCompleteOrder = async (notificationNo) => {
+
+  const handleCompleteOrder = (order) => {
+    setSelectedOrder(order);
+    setShowCompleteModal(true);
+  };
+
+  const handleCompleteSubmit = async () => {
+    if (!price || !warrantyDetail) {
+      setError('Please provide both price and warranty detail.');
+      return;
+    }
+
     try {
-      await axios.put(`http://localhost:3000/storekeeper/order/complete/${notificationNo}`);
+      const { NotificationNo, ProductCode } = selectedOrder;
+      await axios.put(`http://localhost:3000/storekeeper/order/complete/${NotificationNo}`, {
+        ProductCode,
+        Price: price,
+        WarrantyDetail: warrantyDetail,
+      });
       fetchVerifiedOrders();
+      setShowCompleteModal(false);
+      setPrice('');
+      setWarrantyDetail('');
+      setSelectedOrder(null);
     } catch (error) {
       console.error('Error completing order:', error);
       setError('Error completing order');
@@ -69,13 +95,13 @@ const StoreKeeperOrder = () => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
   return (
     <div className="container mt-4">
       <h2>Requested Orders</h2>
       <table className="table table-bordered">
         <thead className="thead-dark">
           <tr>
-            
             <th>Date</th>
             <th>Product Code</th>
             <th>Name</th>
@@ -89,7 +115,6 @@ const StoreKeeperOrder = () => {
         <tbody>
           {requestedOrders.map((order) => (
             <tr key={order.NotificationNo}>
-              
               <td>{formatDate(order.Date)}</td>
               <td>{order.ProductCode}</td>
               <td>{order.Name}</td>
@@ -100,10 +125,16 @@ const StoreKeeperOrder = () => {
               <td>
                 {order.OrderStatus === 'Ordered' && (
                   <>
-                    <button className="btn btn-primary m-3 rounded-3" onClick={() => handleVerifyOrder(order.NotificationNo)}>
+                    <button
+                      className="btn btn-primary m-3 rounded-3"
+                      onClick={() => handleVerifyOrder(order.NotificationNo)}
+                    >
                       Verify
                     </button>
-                    <button className="btn btn-danger rounded-3" onClick={() => handleCancelOrder(order.NotificationNo)}>
+                    <button
+                      className="btn btn-danger rounded-3"
+                      onClick={() => handleCancelOrder(order.NotificationNo)}
+                    >
                       Cancel
                     </button>
                   </>
@@ -134,7 +165,10 @@ const StoreKeeperOrder = () => {
               <td>{order.Quantity}</td>
               <td>{formatDate(order.VerifiedDate)}</td>
               <td>
-                <button className="btn btn-primary" onClick={() => handleCompleteOrder(order.NotificationNo)}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleCompleteOrder(order)}
+                >
                   Complete
                 </button>
               </td>
@@ -144,9 +178,44 @@ const StoreKeeperOrder = () => {
       </table>
 
       {error && <div className="alert alert-danger mt-3">{error}</div>}
+
+      <Modal show={showCompleteModal} onHide={() => setShowCompleteModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Complete Order</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group>
+              <Form.Label>Price</Form.Label>
+              <Form.Control
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Warranty Detail</Form.Label>
+              <Form.Control
+                type="text"
+                value={warrantyDetail}
+                onChange={(e) => setWarrantyDetail(e.target.value)}
+                required
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCompleteModal(false)}>
+            Close
+          </Button>
+          <Button variant="primary" onClick={handleCompleteSubmit}>
+            Submit
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
 
 export default StoreKeeperOrder;
-
