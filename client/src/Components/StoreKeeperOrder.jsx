@@ -65,7 +65,7 @@ const StoreKeeperOrder = () => {
   };
 
   const handleCompleteSubmit = async () => {
-    if (!price || !warrantyDetail) {
+    if (!price) {
       setError('Please provide both price and warranty detail.');
       return;
     }
@@ -75,12 +75,10 @@ const StoreKeeperOrder = () => {
       await axios.put(`http://localhost:3000/storekeeper/order/complete/${NotificationNo}`, {
         ProductCode,
         Price: price,
-        WarrantyDetail: warrantyDetail,
       });
       fetchVerifiedOrders();
       setShowCompleteModal(false);
       setPrice('');
-      setWarrantyDetail('');
       setSelectedOrder(null);
     } catch (error) {
       console.error('Error completing order:', error);
@@ -191,15 +189,6 @@ const StoreKeeperOrder = () => {
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Warranty Detail</Form.Label>
-              <Form.Control
-                type="text"
-                value={warrantyDetail}
-                onChange={(e) => setWarrantyDetail(e.target.value)}
                 required
               />
             </Form.Group>

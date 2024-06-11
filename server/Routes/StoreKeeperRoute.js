@@ -1,7 +1,7 @@
 import express from 'express';
 import db from '../config/db.js';
 const router = express.Router();
-//Orders-----------------------------------------------------------------------------------------------------
+
 
 // Orders-----------------------------------------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ router.get('/orders/verified', (req, res) => {
 // Complete order and update product quantity
 router.put('/order/complete/:notificationNo', (req, res) => {
   const { notificationNo } = req.params;
-  const { ProductCode, Price, WarrantyDetail } = req.body;
+  const { ProductCode, Price} = req.body;
 
   const getOrderQuery = `
     SELECT ProductCode, Quantity 
@@ -102,8 +102,8 @@ router.put('/order/complete/:notificationNo', (req, res) => {
   `;
 
   const insertBatchQuery = `
-    INSERT INTO Batch (InwardDate, ProductCode, WarrantyDetail, Price)
-    VALUES (Now(), ?, ?, ?)
+    INSERT INTO Batch (InwardDate, ProductCode, PurchasePrice)
+    VALUES (Now(), ?, ?)
   `;
 
   db.query(getOrderQuery, [notificationNo], (err, results) => {
@@ -140,7 +140,7 @@ router.put('/order/complete/:notificationNo', (req, res) => {
             });
           }
 
-          db.query(insertBatchQuery, [ProductCode, WarrantyDetail, Price], (err, results) => {
+          db.query(insertBatchQuery, [ProductCode, Price], (err, results) => {
             if (err) {
               return db.rollback(() => {
                 console.error('Error inserting batch details:', err);
@@ -248,7 +248,7 @@ router.get('/suppliers', (req, res) => {
 // Route to fetch products data for a specific supplier
 router.get('/suppliers/:username/products', (req, res) => {
   const username = req.params.username;
-  db.query('SELECT p.*, pu.PurchasePrice FROM Product p JOIN Purchase pu ON p.ProductCode = pu.ProductCode WHERE pu.Username = ?', [username], (error, results) => {
+  db.query('SELECT p.ProductCode, p.Name FROM Product p JOIN Purchase pu ON p.ProductCode = pu.ProductCode WHERE pu.Username = ?', [username], (error, results) => {
       if (error) {
           console.error('Error fetching products:', error);
           res.status(500).send('Internal Server Error');
@@ -259,7 +259,7 @@ router.get('/suppliers/:username/products', (req, res) => {
 });
 
 // Route to add a new supplier
-router.post('/suppliers', (req, res) => {
+router.post('/suppliers/add', (req, res) => {
   const { FirstName, LastName, Mobile, Email, NIC, Products } = req.body;
 
   db.query('SELECT COUNT(*) AS count FROM Supplier', (error, results) => {
@@ -281,7 +281,7 @@ router.post('/suppliers', (req, res) => {
 
           const purchaseQueries = Products.map(product => {
               return new Promise((resolve, reject) => {
-                  db.query('INSERT INTO Purchase (Username, ProductCode, PurchasePrice) VALUES (?, ?, ?)', [username, product.ProductCode, product.PurchasePrice], (error, results) => {
+                  db.query('INSERT INTO Purchase (Username, ProductCode) VALUES (?, ?)', [username, product.ProductCode], (error, results) => {
                       if (error) {
                           return reject(error);
                       }
@@ -300,7 +300,7 @@ router.post('/suppliers', (req, res) => {
   });
 });
 
-// Route to fetch supplier details including their products
+// Route to edit supplier details
 router.get('/suppliers/:username', (req, res) => {
   const username = req.params.username;
 
@@ -311,7 +311,7 @@ router.get('/suppliers/:username', (req, res) => {
           return;
       }
 
-      db.query('SELECT p.ProductCode, p.Name AS ProductName, pu.PurchasePrice FROM Product p JOIN Purchase pu ON p.ProductCode = pu.ProductCode WHERE pu.Username = ?', [username], (error, productResults) => {
+      db.query('SELECT p.ProductCode, p.Name  FROM Product p JOIN Purchase pu ON p.ProductCode = pu.ProductCode WHERE pu.Username = ?', [username], (error, productResults) => {
           if (error) {
               console.error('Error fetching supplier products:', error);
               res.status(500).send('Internal Server Error');
@@ -346,7 +346,7 @@ router.put('/suppliers/:username', (req, res) => {
 
           const purchaseQueries = Products.map(product => {
               return new Promise((resolve, reject) => {
-                  db.query('INSERT INTO Purchase (Username, ProductCode, PurchasePrice) VALUES (?, ?, ?)', [username, product.ProductCode, product.PurchasePrice], (error, results) => {
+                  db.query('INSERT INTO Purchase (Username, ProductCode) VALUES (?, ?)', [username, product.ProductCode], (error, results) => {
                       if (error) {
                           return reject(error);
                       }

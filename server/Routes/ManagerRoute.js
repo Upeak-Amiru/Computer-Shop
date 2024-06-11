@@ -7,9 +7,8 @@ const router = express.Router();
 
 router.get('/inventory', (req, res) => {
   const query = `
-    SELECT p.ProductCode, p.Name, p.Description, p.Quantity, b.WarrantyDetail, b.Price
+    SELECT p.ProductCode, p.Name, p.Description, p.Quantity, p.WarrantyDetail, p.SellingPrice
     FROM Product p
-    JOIN Batch b ON p.ProductCode = b.ProductCode
     WHERE p.MinQuantity > 0  -- Exclude products with Minquantity 0
   `;
   db.query(query, (err, results) => {
@@ -26,7 +25,7 @@ router.get('/inventory', (req, res) => {
 // Fetch products where Quantity is less than MinQuantity and exclude products from deleted suppliers
 router.get('/orders', (req, res) => {
   const query = `
-    SELECT p.ProductCode, p.Name, p.Description, p.Quantity, pu.PurchasePrice
+    SELECT p.ProductCode, p.Name, p.Description, p.Quantity
     FROM Product p
     JOIN Purchase pu ON p.ProductCode = pu.ProductCode
     JOIN Supplier s ON pu.Username = s.Username

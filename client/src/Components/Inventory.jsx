@@ -89,7 +89,7 @@ const Inventory = () => {
                 <td>{product.Description}</td>
                 <td>{product.Quantity}</td>
                 <td>{product.WarrantyDetail}</td>
-                <td>{product.Price}</td>
+                <td>{product.SellingPrice}</td>
               </tr>
             ))}
         </tbody>

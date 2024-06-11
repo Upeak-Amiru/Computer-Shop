@@ -184,7 +184,6 @@ const Order = () => {
             <th>Name</th>
             <th>Description</th>
             <th>Quantity</th>
-            <th>Purchase Price</th>
           </tr>
         </thead>
         <tbody>
@@ -198,7 +197,6 @@ const Order = () => {
               <td>{product.Name}</td>
               <td>{product.Description}</td>
               <td>{product.Quantity}</td>
-              <td>{product.PurchasePrice}</td>
             </tr>
           ))}
         </tbody>

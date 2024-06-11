@@ -15,7 +15,7 @@ const Suppliers = () => {
         Mobile: '',
         Email: '',
         NIC: '',
-        Products: [{ ProductCode: '', ProductName: '', PurchasePrice: '' }]
+        Products: [{ ProductCode: '', ProductName: '' }]
     });
     const [alert, setAlert] = useState(null);
 
@@ -46,7 +46,7 @@ const Suppliers = () => {
             Mobile: '',
             Email: '',
             NIC: '',
-            Products: [{ ProductCode: '', ProductName: '', PurchasePrice: '' }]
+            Products: [{ ProductCode: '', ProductName: ''}]
         });
 
         axios.post('http://localhost:3000/storekeeper/suppliers/check', { NIC: newSupplier.NIC, Mobile: newSupplier.Mobile })
@@ -124,7 +124,7 @@ const Suppliers = () => {
     const addProductField = () => {
         setNewSupplier({
             ...newSupplier,
-            Products: [...newSupplier.Products, { ProductCode: '', ProductName: '', PurchasePrice: '' }]
+            Products: [...newSupplier.Products, { ProductCode: '', ProductName: ''}]
         });
     };
 
@@ -180,7 +180,6 @@ const Suppliers = () => {
                             <tr>
                                 <th>Product Code</th>
                                 <th>Product Name</th>
-                                <th>Purchase Price</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -188,7 +187,6 @@ const Suppliers = () => {
                                 <tr key={product.ProductCode}>
                                     <td>{product.ProductCode}</td>
                                     <td>{product.ProductName}</td>
-                                    <td>{product.PurchasePrice}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -269,14 +267,6 @@ const Suppliers = () => {
                                             placeholder="Product Name"
                                             value={product.ProductName}
                                             onChange={(e) => handleChange(index, 'ProductName', e.target.value)}
-                                        />
-                                    </Col>
-                                    <Col>
-                                        <Form.Control
-                                            type="number"
-                                            placeholder="Purchase Price"
-                                            value={product.PurchasePrice}
-                                            onChange={(e) => handleChange(index, 'PurchasePrice', e.target.value)}
                                         />
                                     </Col>
                                     <Col>
@@ -364,14 +354,6 @@ const Suppliers = () => {
                                             placeholder="Product Name"
                                             value={product.ProductName}
                                             onChange={(e) => handleChange(index, 'ProductName', e.target.value)}
-                                        />
-                                    </Col>
-                                    <Col>
-                                        <Form.Control
-                                            type="number"
-                                            placeholder="Purchase Price"
-                                            value={product.PurchasePrice}
-                                            onChange={(e) => handleChange(index, 'PurchasePrice', e.target.value)}
                                         />
                                     </Col>
                                     <Col>
