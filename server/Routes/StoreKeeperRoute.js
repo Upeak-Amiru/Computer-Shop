@@ -81,7 +81,7 @@ router.get('/orders/verified', (req, res) => {
 // Complete order and update product quantity
 router.put('/order/complete/:notificationNo', (req, res) => {
   const { notificationNo } = req.params;
-  const { ProductCode, Price} = req.body;
+  const { ProductCode, Price } = req.body;
 
   const getOrderQuery = `
     SELECT ProductCode, Quantity 
@@ -102,8 +102,8 @@ router.put('/order/complete/:notificationNo', (req, res) => {
   `;
 
   const insertBatchQuery = `
-    INSERT INTO Batch (InwardDate, ProductCode, PurchasePrice)
-    VALUES (Now(), ?, ?)
+    INSERT INTO Batch (NotificationNo, InwardDate, ProductCode, PurchasePrice, RemainingQuantity)
+    VALUES (?, Now(), ?, ?, ?)
   `;
 
   db.query(getOrderQuery, [notificationNo], (err, results) => {
@@ -116,7 +116,7 @@ router.put('/order/complete/:notificationNo', (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
-    const { Quantity } = results[0];
+    const { ProductCode, Quantity } = results[0];
 
     db.beginTransaction((err) => {
       if (err) {
@@ -140,7 +140,7 @@ router.put('/order/complete/:notificationNo', (req, res) => {
             });
           }
 
-          db.query(insertBatchQuery, [ProductCode, Price], (err, results) => {
+          db.query(insertBatchQuery, [notificationNo, ProductCode, Price, Quantity], (err, results) => {
             if (err) {
               return db.rollback(() => {
                 console.error('Error inserting batch details:', err);
@@ -163,7 +163,6 @@ router.put('/order/complete/:notificationNo', (req, res) => {
     });
   });
 });
-
 
 //products-----------------------------------------------------------------------------------------------------
 

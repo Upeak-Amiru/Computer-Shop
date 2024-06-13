@@ -1,335 +1,352 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Button, Form, Card, Table, Container, Row, Col, Modal } from 'react-bootstrap';
+import { Typeahead } from 'react-bootstrap-typeahead'; // For product name autocomplete
 
 const Transactions = () => {
-  const [customer, setCustomer] = useState({ name: '', mobile: '' });
-  const [products, setProducts] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
-  const [bill, setBill] = useState({ products: [], totalDiscount: 0, totalPrice: 0 });
-  const [billNo, setBillNo] = useState('');
-  const [date, setDate] = useState('');
+    const [customer, setCustomer] = useState({ name: '', phone: '' });
+    const [products, setProducts] = useState([]);
+    const [product, setProduct] = useState({ code: '', name: '', price: 0, discount: '', quantity: 1, warranty: '' });
+    const [addedProducts, setAddedProducts] = useState([]);
+    const [payment, setPayment] = useState({ cash: 0, card: 0 });
+    const [bill, setBill] = useState({ date: '', billNo: '', totalDiscount: 0, totalPrice: 0 });
+    const [showBill, setShowBill] = useState(false);
 
-  useEffect(() => {
-    // Fetch Bill No and Date
-    axios.get('http://localhost:3000/cashier/new-bill')
-      .then(response => {
-        setBillNo(response.data.billNo);
-        setDate(response.data.date);
-      });
-  }, []);
-
-  const handleProductChange = (index, field, value) => {
-    const newProducts = [...products];
-    newProducts[index][field] = value;
-
-    if (field === 'name' || field === 'code') {
-        axios.get(`http://localhost:3000/cashier/products?query=${value}`)
-            .then(response => {
-                setSuggestions(response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching product suggestions:', error);
-            });
-    }
-
-    if (field === 'code' && value) {
-        axios.get(`http://localhost:3000/cashier/product/code/${value}`)
-            .then(response => {
-                if (response.data.quantity > 0) {
-                    newProducts[index] = { ...newProducts[index], ...response.data };
-                    setSuggestions([]);
-                } else {
-                    alert('Out of stock');
-                }
-                setProducts(newProducts);
-            })
-            .catch(error => {
-                console.error('Error fetching product by code:', error);
-            });
-    } else if (field === 'name' && value) {
-        axios.get(`http://localhost:3000/cashier/product/name/${value}`)
-            .then(response => {
-                if (response.data.length > 0) {
-                    setSuggestions(response.data);
-                    newProducts[index] = { ...newProducts[index], ...response.data[0] };
-                } else {
-                    alert('No products found');
-                }
-                setProducts(newProducts);
-            })
-            .catch(error => {
-                console.error('Error fetching product by name:', error);
-            });
-    } else {
-        setProducts(newProducts);
-    }
-};
-
-  const handleAddProduct = () => {
-    setProducts([...products, { code: '', name: '', price: 0, discount: 0, quantity: 1, discountType: 'amount' }]);
-  };
-
-  const handleCustomerChange = (field, value) => {
-    setCustomer({ ...customer, [field]: value });
-  };
-
-  const handleBillGeneration = () => {
-    // Calculate totals
-    let totalDiscount = 0;
-    let totalPrice = 0;
-
-    products.forEach(product => {
-      const discount = product.discountType === 'percentage'
-        ? (product.discount / 100) * product.price
-        : product.discount;
-
-      const amount = (product.price - discount) * product.quantity;
-
-      totalDiscount += discount * product.quantity;
-      totalPrice += amount;
-
-      product.total = amount;
-      product.discount = discount;
-    });
-
-    setBill({ products, totalDiscount, totalPrice });
-  };
-  const handleProductBlur = (index, field, value) => {
-    if (field === 'code') {
-      axios.get(`http://localhost:3000/cashier/product/code/${value}`)
-        .then(response => {
-          if (response.data.quantity > 0) {
-            const newProducts = [...products];
-            newProducts[index] = { ...newProducts[index], ...response.data };
-            setProducts(newProducts);
-            setSuggestions([]);
-          } else {
-            alert('Out of stock');
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching product by code:', error);
+    useEffect(() => {
+        // Fetch current date, time, and bill number when component mounts
+        axios.get('http://localhost:3000/cashier/getCurrentBillInfo').then(response => {
+            setBill({ ...bill, date: response.data.date, billNo: response.data.billNo });
         });
-    } else if (field === 'name') {
-      axios.get(`http://localhost:3000/cashier/product/name/${value}`)
-        .then(response => {
-          if (response.data.length > 0) {
-            const newProducts = [...products];
-            newProducts[index] = { ...newProducts[index], ...response.data[0] };
-            setProducts(newProducts);
-            setSuggestions([]);
-          } else {
-            alert('No products found');
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching product by name:', error);
-        });
-    }
-  };
-  {suggestions.length > 0 && (
-    <ul className="list-group">
-      {suggestions.map((suggestion, i) => (
-        <li
-          key={i}
-          className="list-group-item"
-          onClick={() => handleSuggestionClick(index, suggestion)}
-        >
-          {suggestion.name}
-        </li>
-      ))}
-    </ul>
-  )}
-  const handleSuggestionClick = (index, suggestion) => {
-    const newProducts = [...products];
-    newProducts[index] = {
-      ...newProducts[index],
-      code: suggestion.code,
-      name: suggestion.name,
-      price: suggestion.price,
-      quantity: 1,
-      discount: 0,
-      discountType: 'amount',
-    };
-    setProducts(newProducts);
-    setSuggestions([]);
-  };
-    
-  const handleSaveBill = () => {
-    const billData = {
-      customer,
-      billNo,
-      date,
-      products: bill.products,
-      totalDiscount: bill.totalDiscount,
-      totalPrice: bill.totalPrice,
+    }, []);
+
+    const handleCustomerChange = (e) => {
+        setCustomer({ ...customer, [e.target.name]: e.target.value });
     };
 
-    axios.post('http://localhost:3000/cashier/save-bill', billData)
-      .then(response => {
-        console.log('Bill saved successfully');
-      })
-      .catch(error => {
-        console.error('Error saving bill:', error);
-      });
+    const handleSaveCustomer = () => {
+        // Save customer details
+        axios.post('http://localhost:3000/cashier/saveCustomer', { customer }).then(response => {
+            if (response.data.success) {
+                alert('Customer saved successfully!');
+            } else {
+                alert('Error saving customer.');
+            }
+        });
+    };
+
+    const handleProductChange = (e) => {
+        setProduct({ ...product, [e.target.name]: e.target.value });
+    };
+
+    const handleProductNameChange = (selected) => {
+        if (selected.length > 0) {
+            const selectedProduct = selected[0];
+            setProduct({
+                code: selectedProduct.ProductCode,
+                name: selectedProduct.Name,
+                price: selectedProduct.SellingPrice,
+                discount: '',
+                quantity: 1,
+                warranty: selectedProduct.WarrantyDetail
+            });
+        } else {
+            setProduct({ code: '', name: '', price: 0, discount: '', quantity: 1, warranty: '' });
+        }
+    };
+
+    const handleProductSearch = (query) => {
+        if (query.length > 2) {
+            axios.get(`http://localhost:3000/cashier/searchProducts?query=${query}`).then(response => {
+                setProducts(response.data);
+            });
+        }
+    };
+
+    const handleAddProduct = () => {
+        // Validate product details and add to addedProducts list
+        if (!product.discount) product.discount = '0'; // Default discount to 0
+        axios.post('http://localhost:3000/cashier/validateProduct', { product }).then(response => {
+            if (response.data.valid) {
+                setAddedProducts([...addedProducts, { ...product, amount: calculateAmount(product) }]);
+                setProduct({ code: '', name: '', price: 0, discount: '', quantity: 1, warranty: '' });
+            } else {
+                alert(response.data.message);
+            }
+        });
+    };
+
+    const calculateAmount = (product) => {
+        let discount = 0;
+        if (product.discount && product.discount !== '') {
+            discount = product.discount.includes('%') ?
+                (parseFloat(product.discount) / 100) * product.price :
+                parseFloat(product.discount);
+        }
+        return (product.price - discount) * product.quantity;
+    };
+
+    // Inside handleCompleteTransaction function
+    const handleCompleteTransaction = () => {
+      // Submit the final transaction data
+      const transactionData = {
+          customer,
+          products: addedProducts,
+          payment,
+          bill
+      };
+      axios.post('http://localhost:3000/cashier/completeTransaction', transactionData)
+          .then(response => {
+              if (response.data.success) {
+                  setBill(response.data.bill);
+                  setShowBill(true);
+                  alert('Transaction completed successfully!');
+              } else {
+                  alert('Error completing transaction.');
+              }
+          })
+          .catch(error => {
+              alert('Error completing transaction.');
+              console.error('Error:', error);
+          });
   };
 
-  return (
-    <div className="container mt-4">
-      <h2>Cashier Dashboard</h2>
 
-      <div className="card mb-4">
-        <div className="card-body">
-          <h5 className="card-title">Customer Details</h5>
-          <div className="row">
-            <div className="col-md-6">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Customer Name"
-                value={customer.name}
-                onChange={(e) => handleCustomerChange('name', e.target.value)}
-              />
-            </div>
-            <div className="col-md-6">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Customer Mobile"
-                value={customer.mobile}
-                onChange={(e) => handleCustomerChange('mobile', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+    const handlePaymentChange = (e) => {
+        setPayment({ ...payment, [e.target.name]: e.target.value });
+    };
 
-      <div className="card mb-4">
-        <div className="card-body">
-          <h5 className="card-title">Products</h5>
-          {products.map((product, index) => (
-            <div key={index} className="row mb-2">
-              <div className="col-md-2">
-              <input
-  type="text"
-  className="form-control"
-  placeholder="Product Code"
-  value={product.code}
-  onChange={(e) => handleProductChange(index, 'code', e.target.value)}
-  onBlur={(e) => handleProductBlur(index, 'code', e.target.value)}
-/>
+    const calculateTotals = () => {
+        let totalDiscount = 0;
+        let totalPrice = 0;
+        addedProducts.forEach(prod => {
+            const discount = prod.discount.includes('%') ?
+                (parseFloat(prod.discount) / 100) * prod.price :
+                parseFloat(prod.discount);
+            totalDiscount += discount * prod.quantity;
+            totalPrice += (prod.price - discount) * prod.quantity;
+        });
 
-              </div>
-              <div className="col-md-4">
-              <input
-  type="text"
-  className="form-control"
-  placeholder="Product Name"
-  value={product.name}
-  onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-  onBlur={(e) => handleProductBlur(index, 'name', e.target.value)}
-/>
+        return { totalDiscount, totalPrice };
+    };
 
-                {suggestions.length > 0 && (
-                  <ul className="list-group">
-                    {suggestions.map((suggestion, i) => (
-                      <li key={i} className="list-group-item">
-                        {suggestion.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="col-md-2">
-                <input
-                  type="number"
-                  className="form-control"
-                  placeholder="Price"
-                  value={product.price}
-                  readOnly
-                />
-              </div>
-              <div className="col-md-2">
-                <input
-                  type="number"
-                  className="form-control"
-                  placeholder="Quantity"
-                  value={product.quantity}
-                  onChange={(e) => handleProductChange(index, 'quantity', e.target.value)}
-                />
-              </div>
-              <div className="col-md-2">
-                <input
-                  type="number"
-                  className="form-control"
-                  placeholder="Discount"
-                  value={product.discount}
-                  onChange={(e) => handleProductChange(index, 'discount', e.target.value)}
-                />
-                <select
-                  className="form-select"
-                  value={product.discountType}
-                  onChange={(e) => handleProductChange(index, 'discountType', e.target.value)}
-                >
-                  <option value="percentage">%</option>
-                  <option value="amount">Amount</option>
-                </select>
-              </div>
-            </div>
-          ))}
-          <button className="btn btn-primary" onClick={handleAddProduct}>Add Product</button>
-        </div>
-      </div>
+    useEffect(() => {
+        const { totalDiscount, totalPrice } = calculateTotals();
+        setBill({ ...bill, totalDiscount, totalPrice });
+    }, [addedProducts]);
 
-      <div className="card mb-4">
-        <div className="card-body">
-          <button className="btn btn-success" onClick={handleBillGeneration}>Generate Bill</button>
-        </div>
-      </div>
-
-      {bill.products.length > 0 && (
-        <div className="card mb-4">
-          <div className="card-body">
-            <h5 className="card-title">Bill Preview</h5>
-            <p>Bill No: {billNo}</p>
-            <p>Date: {date}</p>
-            <p>Customer Name: {customer.name}</p>
-            <p>Customer Mobile: {customer.mobile}</p>
-
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Product Name</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>Discount</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bill.products.map((product, index) => (
-                  <tr key={index}>
-                    <td>{product.name}</td>
-                    <td>{product.price}</td>
-                    <td>{product.quantity}</td>
-                    <td>{product.discount > 0 ? product.discount : '-'}</td>
-                    <td>{product.total}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <p>Total Discount: {bill.totalDiscount}</p>
-            <p>Total Price: {bill.totalPrice}</p>
-
-            <button className="btn btn-primary" onClick={handleSaveBill}>Save Bill</button>
-            <button className="btn btn-secondary ms-2">Edit</button>
-            <button className="btn btn-success ms-2">Print</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    return (
+        <Container>
+            <Card className="my-3 p-3">
+                <Card.Body>
+                    <Form>
+                        <Form.Group controlId="customerName">
+                            <Form.Label>Customer Name</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Enter customer name"
+                                name="name"
+                                value={customer.name}
+                                onChange={handleCustomerChange}
+                            />
+                        </Form.Group>
+                        <Form.Group controlId="customerPhone">
+                            <Form.Label>Customer Phone</Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Enter customer phone"
+                                name="phone"
+                                value={customer.phone}
+                                onChange={handleCustomerChange}
+                            />
+                        </Form.Group>
+                        <Button variant="primary" onClick={handleSaveCustomer}>
+                            Save Customer
+                        </Button>
+                    </Form>
+                </Card.Body>
+            </Card>
+            <Card className="my-3 p-3">
+                <Card.Body>
+                    <Form>
+                        <Row>
+                            <Form.Group as={Col} controlId="productCode">
+                                <Form.Label>Product Code</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Enter product code"
+                                    name="code"
+                                    value={product.code}
+                                    onChange={handleProductChange}
+                                    readOnly
+                                />
+                            </Form.Group>
+                            <Form.Group as={Col} controlId="productName">
+                                <Form.Label>Product Name</Form.Label>
+                                <Typeahead
+                                    id="productName"
+                                    placeholder="Enter product name"
+                                    onInputChange={handleProductSearch}
+                                    onChange={handleProductNameChange}
+                                    options={products}
+                                    labelKey="Name"
+                                    selected={products.filter(p => p.Name === product.name)}
+                                />
+                            </Form.Group>
+                        </Row>
+                        <Row>
+                            <Form.Group as={Col} controlId="productPrice">
+                                <Form.Label>Selling Price</Form.Label>
+                                <Form.Control
+                                    type="number"
+                                    placeholder="Enter selling price"
+                                    name="price"
+                                    value={product.price}
+                                    onChange={handleProductChange}
+                                    readOnly
+                                />
+                            </Form.Group>
+                            <Form.Group as={Col} controlId="productDiscount">
+                                <Form.Label>Discount</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Enter discount"
+                                    name="discount"
+                                    value={product.discount}
+                                    onChange={handleProductChange}
+                                />
+                            </Form.Group>
+                        </Row>
+                        <Row>
+                            <Form.Group as={Col} controlId="productQuantity">
+                                <Form.Label>Quantity</Form.Label>
+                                <Form.Control
+                                    type="number"
+                                    placeholder="Enter quantity"
+                                    name="quantity"
+                                    value={product.quantity}
+                                    onChange={handleProductChange}
+                                />
+                            </Form.Group>
+                            <Form.Group as={Col} controlId="productWarranty">
+                                <Form.Label>Warranty</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Enter warranty details"
+                                    name="warranty"
+                                    value={product.warranty}
+                                    onChange={handleProductChange}
+                                    readOnly
+                                />
+                            </Form.Group>
+                        </Row>
+                        <Button variant="primary" onClick={handleAddProduct}>
+                            Add Product
+                        </Button>
+                    </Form>
+                </Card.Body>
+            </Card>
+            <Card className="my-3 p-3">
+                <Card.Body>
+                    <h4>Selected Products</h4>
+                    <Table striped bordered hover>
+                        <thead>
+                            <tr>
+                                <th>Product Code</th>
+                                <th>Product Name</th>
+                                <th>Price</th>
+                                <th>Discount</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Warranty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {addedProducts.map((prod, index) => (
+                                <tr key={index}>
+                                    <td>{prod.code}</td>
+                                    <td>{prod.name}</td>
+                                    <td>{prod.price}</td>
+                                    <td>{prod.discount}</td>
+                                    <td>{prod.quantity}</td>
+                                    <td>{prod.amount}</td>
+                                    <td>{prod.warranty}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                    <h5>Net Total Discount: {bill.totalDiscount && bill.totalDiscount}</h5>
+                    <h5>Net Total Price: {bill.totalPrice}</h5>
+                </Card.Body>
+            </Card>
+            <Card className="my-3 p-3">
+                <Card.Body>
+                    <h4>Select Payment Method</h4>
+                    <Form>
+                        <Form.Group controlId="paymentCash">
+                            <Form.Label>Cash Payment</Form.Label>
+                            <Form.Control
+                                type="number"
+                                placeholder="Enter cash payment"
+                                name="cash"
+                                value={payment.cash}
+                                onChange={handlePaymentChange}
+                            />
+                        </Form.Group>
+                        <Form.Group controlId="paymentCard">
+                            <Form.Label>Card Payment</Form.Label>
+                            <Form.Control
+                                type="number"
+                                placeholder="Enter card payment"
+                                name="card"
+                                value={payment.card}
+                                onChange={handlePaymentChange}
+                            />
+                        </Form.Group>
+                    </Form>
+                    <Button variant="success" onClick={handleCompleteTransaction}>
+                        Complete Transaction
+                    </Button>
+                </Card.Body>
+            </Card>
+            <Modal show={showBill} onHide={() => setShowBill(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Bill Summary</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <h5>Date: {bill.date}</h5>
+                    <h5>Bill No: {bill.billNo}</h5>
+                    <h5>Customer Name: {customer.name}</h5>
+                    <h5>Customer Phone: {customer.phone}</h5>
+                    <Table striped bordered hover>
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Price</th>
+                                <th>Discount</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Warranty</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {addedProducts.map((prod, index) => (
+                                <tr key={index}>
+                                    <td>{prod.name}</td>
+                                    <td>{prod.price}</td>
+                                    <td>{prod.discount}</td>
+                                    <td>{prod.quantity}</td>
+                                    <td>{prod.amount}</td>
+                                    <td>{prod.warranty}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                    <h5>Net Total Discount: {bill.totalDiscount}</h5>
+                    <h5>Net Total Price: {bill.totalPrice}</h5>
+                </Modal.Body>
+            </Modal>
+        </Container>
+    );
 };
 
 export default Transactions;
