@@ -5,6 +5,7 @@ import { userRouter } from "./Routes/userRoute.js";
 import { ManagerRouter } from "./Routes/ManagerRoute.js";
 import { CashierRouter } from "./Routes/CashierRoute.js";
 import { StoreKeeperRouter } from "./Routes/StoreKeeperRoute.js";
+import { TechnicianRouter} from "./Routes/TechnicianRoute.js";
 const app = express() 
 app.use(cors({ 
     origin: ["http://localhost:5173"], 
@@ -19,6 +20,7 @@ app.use('/api', userRouter);
 app.use('/manager', ManagerRouter);
 app.use('/cashier', CashierRouter);
 app.use('/storekeeper', StoreKeeperRouter);
+app.use('/technician', TechnicianRouter);
 
 
 app.listen(3000, () => {

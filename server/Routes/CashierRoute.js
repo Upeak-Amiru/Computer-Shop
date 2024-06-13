@@ -308,30 +308,112 @@ router.post('/issueRepairBill', (req, res) => {
   });
 });
 
-// Get repairs
+// Fetch repairs for cashier
 router.get('/getRepairs', (req, res) => {
-  const query = `
-      SELECT 
-          c.Name as customerName, 
-          c.Mobile as customerMobile, 
-          rb.Date, 
-          p.Name as productName, 
-          rb.Advance, 
-          rb.Finish as status 
-      FROM RepairBill rb
-      JOIN Bill b ON rb.BillNo = b.BillNo
-      JOIN Customer c ON b.CustomerCode = c.CustomerCode
-      JOIN Product p ON rb.ProductCode = p.ProductCode
-  `;
-  db.query(query, (err, results) => {
-      if (err) {
-          console.error(err);
-          return res.status(500).json({ message: 'Internal Server Error' });
-      }
-      res.json(results);
-  });
+    const query = `
+        SELECT 
+            rb.RBillNo, 
+            rb.Date, 
+            rb.Time, 
+            rb.Advance, 
+            c.Name AS CustomerName, 
+            c.Mobile AS CustomerMobile, 
+            p.Name AS ProductName,
+            COALESCE(rj.RepairStatus, 'Waiting') AS RepairStatus
+        FROM RepairBill rb
+        JOIN Bill b ON rb.BillNo = b.BillNo
+        JOIN Customer c ON b.CustomerCode = c.CustomerCode
+        JOIN Product p ON rb.ProductCode = p.ProductCode
+        LEFT JOIN RepairJob rj ON rb.RBillNo = rj.RBillNo
+    `;
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+        res.json(results);
+    });
 });
 
+// Generate bill for repair
+router.post('/generateBill', (req, res) => {
+    const { rBillNo } = req.body;
+
+    // Update Finish status and Date, Time in RepairBill table
+    const updateQuery = `
+        UPDATE RepairBill 
+        SET Finish = 1, Date = CURDATE(), Time = CURTIME() 
+        WHERE RBillNo = ?
+    `;
+    
+    db.query(updateQuery, [rBillNo], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Internal Server Error' });
+        }
+
+        // Fetch the BillNo related to the RBillNo
+        const billQuery = `
+            SELECT 
+                rb.BillNo, rb.Date, rb.Time, rb.Advance, 
+                c.Name AS CustomerName, c.Mobile AS CustomerMobile, 
+                rj.Description, rj.TechnicianCost 
+            FROM RepairBill rb
+            JOIN Bill b ON rb.BillNo = b.BillNo
+            JOIN Customer c ON b.CustomerCode = c.CustomerCode
+            LEFT JOIN RepairJob rj ON rb.RBillNo = rj.RBillNo
+            WHERE rb.RBillNo = ?
+        `;
+
+        db.query(billQuery, [rBillNo], (err, billResults) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ message: 'Internal Server Error' });
+            }
+
+            if (billResults.length === 0) {
+                return res.status(404).json({ message: 'Repair Bill not found' });
+            }
+
+            const billData = billResults[0];
+
+            // Fetch the accessories used in the repair
+            const accessoriesQuery = `
+                SELECT 
+                    p.Name, rbp.Quantity, rbp.Discount, p.SellingPrice,
+                    (p.SellingPrice - rbp.Discount) * rbp.Quantity AS Amount
+                FROM RepairBillProduct rbp
+                JOIN Product p ON rbp.ProductCode = p.ProductCode
+                WHERE rbp.RBillNo = ?
+            `;
+
+            db.query(accessoriesQuery, [rBillNo], (err, accessoriesResults) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ message: 'Internal Server Error' });
+                }
+
+                const accessories = accessoriesResults;
+                const fullAmount = accessories.reduce((sum, item) => sum + item.Amount, parseFloat(billData.TechnicianCost));
+                const remainingAmount = fullAmount - parseFloat(billData.Advance);
+
+                res.json({
+                    BillNo: billData.BillNo,
+                    CustomerName: billData.CustomerName,
+                    CustomerMobile: billData.CustomerMobile,
+                    Date: billData.Date,
+                    Time: billData.Time,
+                    Description: billData.Description,
+                    TechnicianCost: billData.TechnicianCost,
+                    Accessories: accessories,
+                    FullAmount: fullAmount,
+                    Advance: billData.Advance,
+                    RemainingAmount: remainingAmount
+                });
+            });
+        });
+    });
+});
 
 
 export { router as CashierRouter };
